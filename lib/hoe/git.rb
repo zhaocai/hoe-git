@@ -1,3 +1,4 @@
+require 'highline'
 class Hoe #:nodoc:
 
   # This module is a Hoe plugin. You can set its attributes in your
@@ -32,9 +33,15 @@ class Hoe #:nodoc:
 
     attr_accessor :git_remotes
 
+    # Do you want to ask for release tagging message
+    # [default: <tt>true</tt>]
+
+    attr_accessor :git_ask_tag_message
+
     def initialize_git #:nodoc:
       self.git_release_tag_prefix = "v"
       self.git_remotes            = %w(origin)
+      self.git_ask_tag_message    = true
     end
 
     def define_git_tasks #:nodoc:
@@ -130,14 +137,18 @@ class Hoe #:nodoc:
     end
 
     def git_tag_and_push tag
-      msg = "Tagging #{tag}."
+      msg_option = ''
+      if git_ask_tag_message
+        msg = HighLine.new.ask("Tag (release) message:\n> ")
+        msg_option = "-m '#{msg}'" unless msg.empty?
+      end
 
       if git_svn?
-        sh "git svn tag #{tag} -m '#{msg}'"
+        sh "git svn tag #{tag} #{msg_option}"
       else
         flags = ' -s' unless `git config --get user.signingkey`.empty?
 
-        sh "git tag#{flags} -f #{tag} -m '#{msg}'"
+        sh "git tag#{flags} -f #{tag} #{msg_option}"
         git_remotes.each { |remote| sh "git push -f #{remote} tag #{tag}" }
       end
     end
